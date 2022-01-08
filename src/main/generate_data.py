@@ -89,54 +89,104 @@ def generate_manhattan_distances(coords):
 
 def TSP20():
     random.seed(1)
-    num_roads = 20
-    num_cities = 20
     num_train = 10000
     num_test = 1000
     total = num_train + num_test
-    delta = 5
-    size = (512, 512, 3)
     coords = generate_coordinates(num_roads, delta, size)
     values = [random.sample(coords, num_cities) for _ in range(total)]
-    print(f'starting computations on {cpu_count()} cores')
+    num_cores = cpu_count() // 2 - 1
+    print(f'starting computations on {num_cores} cores')
 
-    with Pool(cpu_count()) as pool:
-        res = pool.map(generate_tsp_sol, values)
+    with Pool(num_cores) as pool:
+        res = pool.map(generate_hk_tsp_sol, values)
     dic = {}
     dic["coords"] = coords
+    dic["train"] = {}
+    dic["test"] = {}
     for i in range(num_train):
-        dic["train"] = {i: {
-            "results": res[i],
+        dic["train"][i] = {
+            "results": res[i][0],
+            "time": res[i][1],
             "delivery_locations": values[i]
-            }
         }
     for i in range(num_train, total):
-        dic["test"] = {i: {
-            "results": res[i],
+        dic["test"][i] = {
+            "results": res[i][0],
+            "time": res[i][1],
             "delivery_locations": values[i]
-            }
         }
     with open("TSP20.pickle", "wb") as f:
         pickle.dump(dic, f, protocol=2)
 
 
-def generate_tsp_sol(subset):
+def TSP():
+    random.seed(1)
+    num_train = 200
+    num_test = 50
+    total = num_train + num_test
+    coords = generate_coordinates(num_roads, delta, size)
+    values = [random.sample(coords, num_cities) for _ in range(total)]
+    num_cores = cpu_count() // 2 - 1
+    print(f'starting computations on {num_cores} cores')
+
+    with Pool(num_cores) as pool:
+        res = pool.map(generate_gortools_tsp_sol, values)
+    dic = {}
+    dic["coords"] = coords
+    dic["train"] = {}
+    dic["test"] = {}
+    for i in range(num_train):
+        dic["train"][i] = {
+            "results": res[i][0],
+            "time": res[i][1],
+            "delivery_locations": values[i]
+        }
+    for i in range(num_train, total):
+        dic["test"][i] = {
+            "results": res[i][0],
+            "time": res[i][1],
+            "delivery_locations": values[i]
+        }
+    with open("TSP%d.pickle" %num_cities, "wb") as f:
+        pickle.dump(dic, f, protocol=2)
+
+
+def generate_hk_tsp_sol(subset):
     dists = generate_manhattan_distances(subset)
+    start = timer()
     print("started")
     tsp_sol = hk.held_karp(dists)
-    print("ended")
-    return tsp_sol
+    end = timer()
+    elapsed = end - start
+    print("ended: ", elapsed)
+    return tsp_sol, elapsed
+
+
+def generate_gortools_tsp_sol(subset):
+    dists = generate_manhattan_distances(subset)
+    start = timer()
+    print("started")
+    tsp_sol = gortools.main(dists)
+    end = timer()
+    elapsed = end - start
+    print("ended: ", elapsed)
+    return tsp_sol, elapsed
 
 
 if __name__ == "__main__":
-    n = 20
-    delta = 10
+    num_roads = 20
+    num_cities = 30
+    delta = 5
     size = (512, 512, 3)
-    coords = generate_coordinates(n, delta, size)
-    subset = random.sample(coords, 10)
-    dists = hk.generate_manhattan_distances(subset)
-    tsp_sol = generate_tsp_sol(subset)
-    routes = gortools.main(dists)
+    TSP()
+    # n = 20
+    # delta = 10
+    # size = (512, 512, 3)
+    # coords = generate_coordinates(n, delta, size)
+    # subset = random.sample(coords, 10)
+    # dists = hk.generate_manhattan_distances(subset)
+    # tsp_sol = generate_tsp_sol(subset)
+    # routes = gortools.main(dists)
 
 # def compute_tsp_sol():
 #     start = timer()
