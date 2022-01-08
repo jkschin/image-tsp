@@ -40,7 +40,8 @@ def get_routes(solution, routing, manager):
       routes.append(route)
     return routes
 
-def main(dists):
+
+def main(dists, search_params=False):
     """Entry point of the program."""
     # Instantiate the data problem.
     data = create_data_model(dists)
@@ -66,16 +67,22 @@ def main(dists):
     routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
 
     # Setting first solution heuristic.
-    search_parameters = pywrapcp.DefaultRoutingSearchParameters()
-    search_parameters.first_solution_strategy = (
-        routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC)
+    if not search_params:
+        search_parameters = pywrapcp.DefaultRoutingSearchParameters()
+        search_parameters.local_search_metaheuristic = (
+            routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH)
+        search_parameters.time_limit.seconds = 10
+        # search_parameters.log_search = True
+        # search_parameters.first_solution_strategy = (
+        #     # routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC)
+        #     routing_enums_pb2.FirstSolutionStrategy.AUTOMATIC)
 
     # Solve the problem.
     solution = routing.SolveWithParameters(search_parameters)
 
     # Print solution on console.
-    if solution:
-        print_solution(manager, routing, solution)
+    # if solution:
+    #     print_solution(manager, routing, solution)
     # Index of 0 here as we only have one vehicle.
     route = get_routes(solution, routing, manager)[0]
     return solution.ObjectiveValue(), route

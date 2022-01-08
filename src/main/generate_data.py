@@ -5,6 +5,8 @@ from timeit import default_timer as timer
 from multiprocessing import Pool, cpu_count
 import src.solver.heldkarp as hk
 import src.solver.googleortools as gortools
+from ortools.constraint_solver import routing_enums_pb2
+from ortools.constraint_solver import pywrapcp
 
 
 def generate_coordinates(n, delta, size):
@@ -163,6 +165,10 @@ def generate_hk_tsp_sol(subset):
 
 
 def generate_gortools_tsp_sol(subset):
+    search_parameters = pywrapcp.DefaultRoutingSearchParameters()
+    search_parameters.local_search_metaheuristic = (
+        routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH)
+    search_parameters.time_limit.seconds = 10
     dists = generate_manhattan_distances(subset)
     start = timer()
     print("started")
