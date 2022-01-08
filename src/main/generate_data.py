@@ -227,6 +227,8 @@ def generate_tsp_images(picklefile):
             i += 1
             if ENV == LOCAL and i == 100:
                 break
+            if i % 1000 == 0:
+                print(i)
 
 
 if __name__ == "__main__":
