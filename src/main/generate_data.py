@@ -87,12 +87,46 @@ def generate_manhattan_distances(coords):
     return dists
 
 
+def TSP20():
+    random.seed(1)
+    num_roads = 20
+    num_cities = 20
+    num_train = 10000
+    num_test = 1000
+    total = num_train + num_test
+    delta = 5
+    size = (512, 512, 3)
+    coords = generate_coordinates(num_roads, delta, size)
+    values = [random.sample(coords, num_cities) for _ in range(total)]
+    print(f'starting computations on {cpu_count()} cores')
+
+    with Pool(cpu_count()) as pool:
+        res = pool.map(generate_tsp_sol, values)
+    dic = {}
+    dic["coords"] = coords
+    for i in range(num_train):
+        dic["train"] = {i: {
+            "results": res[i],
+            "delivery_locations": values[i]
+            }
+        }
+    for i in range(num_train, total):
+        dic["test"] = {i: {
+            "results": res[i],
+            "delivery_locations": values[i]
+            }
+        }
+    with open("TSP20.pickle", "wb") as f:
+        pickle.dump(dic, f, protocol=2)
+
+
 def generate_tsp_sol(subset):
     dists = generate_manhattan_distances(subset)
     print("started")
     tsp_sol = hk.held_karp(dists)
     print("ended")
     return tsp_sol
+
 
 if __name__ == "__main__":
     n = 20
