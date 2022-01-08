@@ -71,7 +71,7 @@ def main(dists, search_params=False):
         search_parameters = pywrapcp.DefaultRoutingSearchParameters()
         search_parameters.local_search_metaheuristic = (
             routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH)
-        search_parameters.time_limit.seconds = 10
+        search_parameters.time_limit.seconds = 30
         # search_parameters.log_search = True
         # search_parameters.first_solution_strategy = (
         #     # routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC)

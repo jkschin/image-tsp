@@ -5,8 +5,6 @@ from timeit import default_timer as timer
 from multiprocessing import Pool, cpu_count
 import src.solver.heldkarp as hk
 import src.solver.googleortools as gortools
-from ortools.constraint_solver import routing_enums_pb2
-from ortools.constraint_solver import pywrapcp
 
 
 def generate_coordinates(n, delta, size):
@@ -123,12 +121,12 @@ def TSP20():
 
 def TSP():
     random.seed(1)
-    num_train = 200
-    num_test = 50
+    num_train = 10000
+    num_test = 1000
     total = num_train + num_test
     coords = generate_coordinates(num_roads, delta, size)
     values = [random.sample(coords, num_cities) for _ in range(total)]
-    num_cores = cpu_count() // 2 - 1
+    num_cores = cpu_count() 
     print(f'starting computations on {num_cores} cores')
 
     with Pool(num_cores) as pool:
@@ -165,10 +163,6 @@ def generate_hk_tsp_sol(subset):
 
 
 def generate_gortools_tsp_sol(subset):
-    search_parameters = pywrapcp.DefaultRoutingSearchParameters()
-    search_parameters.local_search_metaheuristic = (
-        routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH)
-    search_parameters.time_limit.seconds = 10
     dists = generate_manhattan_distances(subset)
     start = timer()
     print("started")
@@ -181,9 +175,10 @@ def generate_gortools_tsp_sol(subset):
 
 if __name__ == "__main__":
     num_roads = 20
-    num_cities = 30
+    num_cities = 200
     delta = 5
     size = (512, 512, 3)
+    print("Num Cities: ", num_cities)
     TSP()
     # n = 20
     # delta = 10
