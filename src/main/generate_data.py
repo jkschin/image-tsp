@@ -5,6 +5,10 @@ from timeit import default_timer as timer
 from multiprocessing import Pool, cpu_count
 import src.solver.heldkarp as hk
 import src.solver.googleortools as gortools
+import src.visualization.visualization as viz
+import numpy as np
+import cv2
+import sys
 
 
 def generate_coordinates(n, delta, size):
@@ -173,21 +177,77 @@ def generate_gortools_tsp_sol(subset):
     return tsp_sol, elapsed
 
 
+def generate_tsp_images(picklefile):
+    cwd = os.getcwd()
+    filenames = picklefile.split("/")
+    assert len(filenames) == 3
+    num_cities = filenames[-1].split(".")[0][3:]
+    data = pickle.load(open(picklefile, "rb"))
+    assert len(data.keys()) == 3
+    assert "coords" in data.keys()
+    assert "train" in data.keys()
+    assert "test" in data.keys()
+    assert len(data["coords"]) == 400
+    assert len(data["train"]) == 10000
+    assert len(data["test"]) == 1000
+    LOCAL = "local"
+    CLOUD = "cloud"
+    if cwd.startswith("/Users"):
+        ENV = LOCAL
+    elif cwd.startswith("/home"):
+        ENV = CLOUD
+    else:
+        raise Exception("Current working directory neither starts with /Users"
+                        "or /home.")
+    print("Generating TSP images on %s environment for %s cities" %(ENV, num_cities))
+
+
+    city_coords = data["coords"]
+    for data_class in ["train", "test"]:
+        i = 0
+        for k, v in data[data_class].items():
+            tour = v["results"][1]
+            delivery_locations = v["delivery_locations"]
+            for image_type in ["input", "output"]:
+                img = np.zeros(size, np.uint8)
+                path = "data/images/%s/%s/%s" %(num_cities, data_class, image_type)
+                if not os.path.exists(path):
+                    os.makedirs(path)
+                if image_type == "input":
+                    img = viz.draw_input_data(img, city_coords,
+                                              delivery_locations,
+                                              size, delta, viz.RED, False)
+                    img_path = os.path.join(path, "input_%05d.png" %k)
+                    cv2.imwrite(img_path, img)
+                elif image_type == "output":
+                    img = viz.draw_output_data(img, delivery_locations,
+                                               tour, delta, viz.RED, False)
+                    img_path = os.path.join(path, "output_%05d.png" %k)
+                    cv2.imwrite(img_path, img)
+            i += 1
+            if ENV == LOCAL and i == 100:
+                break
+
+
 if __name__ == "__main__":
     num_roads = 20
     num_cities = 200
     delta = 5
     size = (512, 512, 3)
-    print("Num Cities: ", num_cities)
-    TSP()
-    # n = 20
-    # delta = 10
-    # size = (512, 512, 3)
-    # coords = generate_coordinates(n, delta, size)
-    # subset = random.sample(coords, 10)
-    # dists = hk.generate_manhattan_distances(subset)
-    # tsp_sol = generate_tsp_sol(subset)
-    # routes = gortools.main(dists)
+    command = sys.argv[1]
+    if command == "generate":
+        print("Num Cities: ", num_cities)
+        TSP()
+    elif command == "draw":
+        picklefile = sys.argv[2]
+        generate_tsp_images(picklefile)
+    elif command == "drawall":
+        d = sys.argv[2]
+        for filename in os.listdir(d):
+            picklefile = os.path.join(d, filename)
+            generate_tsp_images(picklefile)
+    else:
+        raise Exception("Invalid Command")
 
 # def compute_tsp_sol():
 #     start = timer()
