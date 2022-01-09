@@ -10,13 +10,8 @@ import torch.nn.functional as F
 import os
 from collections import Counter
 import numpy as np
+from torchinfo import summary
 
-expt = "20211222-Expt8"
-expt_params = "512-boosted-1150"
-output_dir = "%s-%s" %(expt, expt_params)
-image_size = (512, 512)
-if not os.path.exists('./%s' %output_dir):
-    os.mkdir('./%s' %output_dir)
 
 RED = (0, 0, 255)
 GREEN = (0, 255, 0)
@@ -27,7 +22,6 @@ BACKGROUND = 0
 CITY = 1
 PATH = 2
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def to_img(x):
     x = torch.argmax(x, dim=1)
@@ -46,25 +40,9 @@ def to_img(x):
     # print(torch.max(x))
     return x
 
-
-num_epochs = 1000
-if torch.cuda.is_available():
-    batch_size = 16
-else:
-    batch_size = 1
-learning_rate = 1e-3
-print(batch_size)
-
-img_transform = transforms.Compose([
-    transforms.ToTensor(),
-])
-
 class CustomDataset(Dataset):
-    def __init__(self, transform=None):
-        if torch.cuda.is_available():
-            self.root_dir="/home/gridsan/jchin/held-karp"
-        else:
-            self.root_dir = "/Users/samuelchin/Desktop/MIT/Thesis/held-karp/"
+    def __init__(self, num_cities, transform=None):
+        self.num_cities = num_cities
         self.transform = transform
 
     def __len__(self):
@@ -94,7 +72,9 @@ class CustomDataset(Dataset):
         return img
 
     def __getitem__(self, idx):
-        inp_name = os.path.join(self.root_dir, "512x512/20/train/input", "input_%05d.png" %idx)
+        if idx in [85, 446]:
+            idx -= 1
+        inp_name = os.path.join("data/images/%d/train/input" %self.num_cities, "input_%05d.png" %idx)
         inp = cv2.imread(inp_name)
         inp = self.transform_inp(inp)
         inp = torch.as_tensor(inp, dtype=torch.int64)
@@ -104,7 +84,7 @@ class CustomDataset(Dataset):
         inp = torch.squeeze(inp)
         inp = inp.type(torch.FloatTensor)
 
-        out_name = os.path.join(self.root_dir, "512x512/20/train/output", "output_%05d.png" %idx)
+        out_name = os.path.join("data/images/%d/train/output" %self.num_cities, "output_%05d.png" %idx)
         out = cv2.imread(out_name)
         out = self.transform_out(out)
         out = torch.as_tensor(out, dtype=torch.int64)
@@ -117,11 +97,7 @@ class CustomDataset(Dataset):
         # test = test.type(torch.FloatTensor)
         return inp, out
 
-# dataset = MNIST('./data', transform=img_transform, download=True)
-dataset = CustomDataset(transform=img_transform)
-dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
-num_classes = 3
 class MyNet(nn.Module):
     def __init__(self, my_pretrained_model):
         super(MyNet, self).__init__()
@@ -170,6 +146,7 @@ class MyNet(nn.Module):
         u2 = self.u2(outputs[-2])
         u3 = self.u3(outputs[-3])
         u4 = self.u4(outputs[-4])
+        # 1: Copies the cities and path to the last layer
         x = torch.cat([u1, u2, u3, u4, x_orig[:, 1:, :, :]], 1)
         x = self.last(x)
         # a = self.u1(x)
@@ -178,20 +155,51 @@ class MyNet(nn.Module):
         # x = self.last(x)
         return x
 
+from time import localtime, strftime
+import sys
 if __name__ == "__main__":
+    # label = binascii.b2a_hex(os.urandom(15))[0:10].decode("utf-8")
+    label = strftime("%Y%m%d-%H%M%S", localtime())
+    # Params to Tune
+    # 1. Weights 2. Num Epochs 3. Num Cities 
+    weights = torch.FloatTensor([1, 1, 20])
+    num_epochs = 200
+    num_cities = int(sys.argv[1])
+
+    expt = "%s-%s-%s" %(num_cities, "1120", label)
+    num_classes = 3
+    output_dir = os.path.join("expt", expt)
+    # This cannot be RGB format.
+    image_size = (512, 512)
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    # Sets Batch Size
+    if torch.cuda.is_available():
+        batch_size = 16
+    else:
+        batch_size = 1
+    learning_rate = 1e-3
+    print("Batch Size:", batch_size)
+
+    img_transform = transforms.Compose([
+        transforms.ToTensor(),
+    ])
+
+    dataset = CustomDataset(num_cities, transform=img_transform)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     model_ss = models.densenet161(pretrained=True)
     # for name, param in model_ss.named_parameters():
     # if not "classifier" in name:
     # param.requires_grad = False
     mynet = MyNet(my_pretrained_model=model_ss)
     model = mynet.to(device)
-    from torchinfo import summary
     summary(model, input_size=(batch_size, 3, image_size[0], image_size[1]))
     def init_weights(m):
         if isinstance(m, nn.Conv2d):
             torch.nn.init.kaiming_uniform
     model.apply(init_weights)
-    weights = torch.FloatTensor([1, 1, 4])
     weights = weights.to(device)
     criterion = nn.CrossEntropyLoss(weight=weights)
     # criterion = nn.NLLLoss()
@@ -202,7 +210,7 @@ if __name__ == "__main__":
         print("Epoch: %d" %epoch)
         total_loss = 0
         for data in dataloader:
-            print("Loaded Batch")
+            print("Loaded Batch on", expt)
             inp, out = data
             if torch.cuda.is_available():
                 inp, out = inp.cuda(), out.cuda()
@@ -222,5 +230,5 @@ if __name__ == "__main__":
         # if epoch % 10 == 0:
         print("Image written")
         pic = to_img(output.cpu().data)
-        save_image(pic, './{}/image_{}.png'.format(output_dir, epoch))
-        torch.save(model.state_dict(), './%s.pth' %expt)
+        save_image(pic, os.path.join(output_dir, "image_%d.png" %epoch))
+        torch.save(model.state_dict(), os.path.join(output_dir, 'weights.pth'))
