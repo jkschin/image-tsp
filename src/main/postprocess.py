@@ -1,4 +1,5 @@
 import numpy as np
+import src.visualization.visualization as viz
 
 def get_tour_length(tour, dists):
     """
@@ -55,7 +56,7 @@ def is_valid_path(a, b):
     """
     ra = get_ratio(a)
     rb = get_ratio(b)
-    threshold = 0.95
+    threshold = 0.70
     return ra > threshold and rb > threshold
 
 
@@ -162,21 +163,38 @@ def get_edges(a, b, path_predictions, cities):
     elif ay > by and ax == bx:
         empty = np.array([])
         if is_valid_path(pl, empty) and is_not_crossing_city(cl, empty):
-            edges.append(((a, b), (a, b)))
+            # This tricky thing here is to create a nested tuple.
+            edges.append(((a, b),))
     # A         B       or
     # B         A
     elif ay == by:
         empty = np.array([])
         if is_valid_path(pt, empty) and is_not_crossing_city(ct, empty):
-            edges.append(((a, b), (a, b)))
+            # This tricky thing here is to create a nested tuple.
+            edges.append(((a, b),))
     else:
         raise Exception("Did not catch a case.")
+
+    sorted_edges = []
+    for L in edges:
+        t = []
+        for line in L:
+            line = tuple(sorted(line))
+            t.append(line)
+        sorted_edges.append(tuple(t))
+    return sorted_edges
     # l, r = 1, 2
     # ans[y1:y2+1, x2-l:x2+r] = 0
     # ans[y2-l:y2+r, x1:x2+1] = 0
     # ans[y1:y2+1, x1-l:x1+r] = 0
     # ans[y1-l:y1+r, x1:x2+1] = 0
-    return edges
+
+
+def get_one_pixel_city_image(size, subset):
+    img = np.zeros(size, np.uint8)
+    img = viz.draw_dots(img, subset, 0, viz.RED, False)
+    img[np.where((img == viz.RED).all(axis=2))] = [1, 0, 0]
+    return img[:, :, 0]
 
 
 def decode(nodes, ans, dists, start):
@@ -206,3 +224,23 @@ def decode(nodes, ans, dists, start):
         path.append(best_node)
     path.append(start)
     return path
+
+
+def get_edge_dictionary(subset, pred_img, city_img):
+    dic = {}
+    edges = []
+    aaa = []
+    for i in range(len(subset)):
+        f = {}
+        a = 0
+        for j in range(len(subset)):
+            if i == j:
+                continue
+            e = get_edges(subset[i], subset[j], pred_img, city_img)
+            if len(e) != 0:
+                a += 1
+                f[j] = e
+            edges += e
+        dic[i] = f
+        aaa.append(a)
+    return dic
