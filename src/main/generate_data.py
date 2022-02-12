@@ -91,6 +91,7 @@ def generate_manhattan_distances(coords):
     return dists
 
 
+# TODO(schin): This is exactly the same as the TSP() method. Refactor.
 def TSP20():
     random.seed(1)
     num_train = 10000
@@ -237,6 +238,8 @@ if __name__ == "__main__":
     delta = 5
     size = (512, 512, 3)
     command = sys.argv[1]
+    # This is the main method used to generate TSP solutions. 
+    # TSP() must be changed to TSP20().
     if command == "generate":
         print("Num Cities: ", num_cities)
         TSP()
@@ -250,38 +253,3 @@ if __name__ == "__main__":
             generate_tsp_images(picklefile)
     else:
         raise Exception("Invalid Command")
-
-# def compute_tsp_sol():
-#     start = timer()
-#     size_name = "%dx%d" %(size[0], size[0])
-#     num_roads = 20
-#     num_cities = 20
-#     roads_name = "%d" %num_roads
-#     train_input = os.path.join(size_name, roads_name, "train", "input")
-#     train_output = os.path.join(size_name, roads_name, "train", "output")
-#     test_input = os.path.join(size_name, roads_name, "test", "input")
-#     test_output = os.path.join(size_name, roads_name, "test", "output")
-#     folders = [train_input, train_output, test_input, test_output]
-#     for folder in folders:
-#         if not os.path.exists(folder):
-#             os.makedirs(folder)
-#
-#     random.seed(1)
-#     coords = generate_coordinates(num_roads)
-#     values = [generate_tuples(coords, train_input, train_output, num_cities, i) for i in range(10000)]
-#     values = [i[1] for i in values]
-#     print(f'starting computations on {cpu_count()} cores')
-#
-#     with Pool(cpu_count()) as pool:
-#         res = pool.map(generate_tsp_sol, values)
-#     end = timer()
-#     dic = {}
-#     dic["coords"] = coords
-#     for i, r in enumerate(res):
-#         dic[i] = {
-#             "results": r,
-#             "subset": values[i]
-#         }
-#     with open("tspdump.pickle", "wb") as f:
-#         pickle.dump(dic, f, protocol=2)
-#     print(f'elapsed time: {end - start}')
