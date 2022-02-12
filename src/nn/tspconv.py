@@ -41,13 +41,20 @@ def to_img(x):
     return x
 
 class CustomDataset(Dataset):
-    def __init__(self, num_cities, transform=None):
+    def __init__(self, num_cities, mode, combined=False, transform=None):
         self.num_cities = num_cities
         self.transform = transform
+        self.mode = mode
+        self.combined = combined
 
     def __len__(self):
-        if torch.cuda.is_available():
-            return 10000
+        if torch.cuda.is_available() and self.mode == "train":
+            if self.combined:
+                return 40000
+            else:
+                return 10000
+        elif torch.cuda.is_available() and self.mode == "test":
+            return 1000
         else:
             return 100
 
@@ -72,9 +79,15 @@ class CustomDataset(Dataset):
         return img
 
     def __getitem__(self, idx):
-        if idx in [85, 446]:
-            idx -= 1
-        inp_name = os.path.join("data/images/%d/train/input" %self.num_cities, "input_%05d.png" %idx)
+        num_cities = self.num_cities
+        if self.mode == "test":
+            idx += 10000
+        if self.combined:
+            q, r = idx // 10000, idx % 10000
+            cities = [20, 30, 100, 200]
+            num_cities = cities[q]
+            idx = r
+        inp_name = os.path.join("data/images/%d/%s/input" %(num_cities, self.mode), "input_%05d.png" %idx)
         inp = cv2.imread(inp_name)
         inp = self.transform_inp(inp)
         inp = torch.as_tensor(inp, dtype=torch.int64)
@@ -84,7 +97,7 @@ class CustomDataset(Dataset):
         inp = torch.squeeze(inp)
         inp = inp.type(torch.FloatTensor)
 
-        out_name = os.path.join("data/images/%d/train/output" %self.num_cities, "output_%05d.png" %idx)
+        out_name = os.path.join("data/images/%d/%s/output" %(num_cities, self.mode), "output_%05d.png" %idx)
         out = cv2.imread(out_name)
         out = self.transform_out(out)
         out = torch.as_tensor(out, dtype=torch.int64)
@@ -100,6 +113,7 @@ class CustomDataset(Dataset):
 
 class MyNet(nn.Module):
     def __init__(self, my_pretrained_model):
+        image_size = (512, 512) # hardcoded this for a quick fix
         super(MyNet, self).__init__()
         self.pretrained = my_pretrained_model
         self.u1 = nn.Sequential(
@@ -161,12 +175,13 @@ if __name__ == "__main__":
     # label = binascii.b2a_hex(os.urandom(15))[0:10].decode("utf-8")
     label = strftime("%Y%m%d-%H%M%S", localtime())
     # Params to Tune
-    # 1. Weights 2. Num Epochs 3. Num Cities 
-    weights = torch.FloatTensor([1, 1, 20])
+    # 1. Weights 2. Num Epochs 3. Num Cities 4. Combined
+    weights = torch.FloatTensor([1, 1, 50])
     num_epochs = 200
     num_cities = int(sys.argv[1])
+    combined = True
 
-    expt = "%s-%s-%s" %(num_cities, "1120", label)
+    expt = "%s-%s-%s" %(num_cities, "1150", label)
     num_classes = 3
     output_dir = os.path.join("expt", expt)
     # This cannot be RGB format.
@@ -187,7 +202,7 @@ if __name__ == "__main__":
         transforms.ToTensor(),
     ])
 
-    dataset = CustomDataset(num_cities, transform=img_transform)
+    dataset = CustomDataset(num_cities, "train", combined=combined, transform=img_transform)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     model_ss = models.densenet161(pretrained=True)
     # for name, param in model_ss.named_parameters():

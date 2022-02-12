@@ -6,4 +6,6 @@
  
 
 # Run the script
-python -u src/nn/tspconv.py 200
+# The last number is an argument to set the number of cities.
+# [1, 20, 30, 100, 200]
+python -u src/nn/tspconv.py 1
