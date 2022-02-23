@@ -91,40 +91,7 @@ def generate_manhattan_distances(coords):
     return dists
 
 
-# TODO(schin): This is exactly the same as the TSP() method. Refactor.
-def TSP20():
-    random.seed(1)
-    num_train = 10000
-    num_test = 1000
-    total = num_train + num_test
-    coords = generate_coordinates(num_roads, delta, size)
-    values = [random.sample(coords, num_cities) for _ in range(total)]
-    num_cores = cpu_count() // 2 - 1
-    print(f'starting computations on {num_cores} cores')
-
-    with Pool(num_cores) as pool:
-        res = pool.map(generate_hk_tsp_sol, values)
-    dic = {}
-    dic["coords"] = coords
-    dic["train"] = {}
-    dic["test"] = {}
-    for i in range(num_train):
-        dic["train"][i] = {
-            "results": res[i][0],
-            "time": res[i][1],
-            "delivery_locations": values[i]
-        }
-    for i in range(num_train, total):
-        dic["test"][i] = {
-            "results": res[i][0],
-            "time": res[i][1],
-            "delivery_locations": values[i]
-        }
-    with open("TSP20.pickle", "wb") as f:
-        pickle.dump(dic, f, protocol=2)
-
-
-def TSP():
+def TSP(num_cities, num_roads, delta, size):
     random.seed(1)
     num_train = 10000
     num_test = 1000
@@ -134,8 +101,13 @@ def TSP():
     num_cores = cpu_count() 
     print(f'starting computations on {num_cores} cores')
 
+    if num_cities == 20:
+        func = generate_hk_tsp_sol
+    else:
+        func = generate_gortools_tsp_sol
+
     with Pool(num_cores) as pool:
-        res = pool.map(generate_gortools_tsp_sol, values)
+        res = pool.map(func, values)
     dic = {}
     dic["coords"] = coords
     dic["train"] = {}
@@ -188,7 +160,6 @@ def generate_tsp_images(picklefile):
     assert "coords" in data.keys()
     assert "train" in data.keys()
     assert "test" in data.keys()
-    assert len(data["coords"]) == 400
     assert len(data["train"]) == 10000
     assert len(data["test"]) == 1000
     LOCAL = "local"
@@ -233,16 +204,16 @@ def generate_tsp_images(picklefile):
 
 
 if __name__ == "__main__":
-    num_roads = 20
-    num_cities = 200
     delta = 5
-    size = (512, 512, 3)
     command = sys.argv[1]
+    num_cities = int(sys.argv[2])
+    num_roads = int(sys.argv[3])
+    size = eval(sys.argv[4])
+    assert type(size) == tuple
     # This is the main method used to generate TSP solutions. 
-    # TSP() must be changed to TSP20().
     if command == "generate":
         print("Num Cities: ", num_cities)
-        TSP()
+        TSP(num_cities, num_roads, delta, size)
     elif command == "draw":
         picklefile = sys.argv[2]
         generate_tsp_images(picklefile)
