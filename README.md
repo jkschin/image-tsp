@@ -1,5 +1,7 @@
 # image-tsp
 
+This work is currently under review.
+
 ## Setup
 Ensure `PYTHONPATH` env variable is set first.
 
@@ -23,5 +25,8 @@ To run the test samples on the model:
 2. `python src/nn/tspconv_eval.py`
 
 Don't forget to configure the experiment folders inside `tspconv_eval.py`. If it doesn't run, check your `PYTHONPATH`.
+
+## Collaborators
+1. Matthias Winkenbach (mwinkenb@mit.edu)
 
 
