@@ -150,11 +150,8 @@ def generate_gortools_tsp_sol(subset):
     return tsp_sol, elapsed
 
 
-def generate_tsp_images(picklefile):
+def generate_tsp_images(picklefile, num_cities):
     cwd = os.getcwd()
-    filenames = picklefile.split("/")
-    assert len(filenames) == 3
-    num_cities = filenames[-1].split(".")[0][3:]
     data = pickle.load(open(picklefile, "rb"))
     assert len(data.keys()) == 3
     assert "coords" in data.keys()
@@ -206,17 +203,19 @@ def generate_tsp_images(picklefile):
 if __name__ == "__main__":
     delta = 5
     command = sys.argv[1]
-    num_cities = int(sys.argv[2])
-    num_roads = int(sys.argv[3])
-    size = eval(sys.argv[4])
-    assert type(size) == tuple
     # This is the main method used to generate TSP solutions. 
     if command == "generate":
+        num_cities = int(sys.argv[2])
+        num_roads = int(sys.argv[3])
+        size = eval(sys.argv[4])
+        assert type(size) == tuple
         print("Num Cities: ", num_cities)
         TSP(num_cities, num_roads, delta, size)
     elif command == "draw":
         picklefile = sys.argv[2]
-        generate_tsp_images(picklefile)
+        num_cities = int(sys.argv[3])
+        size = eval(sys.argv[4])
+        generate_tsp_images(picklefile, num_cities)
     elif command == "drawall":
         d = sys.argv[2]
         for filename in os.listdir(d):

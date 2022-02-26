@@ -12,6 +12,10 @@ All data generation code can be found in `src/main/generate_data.py`. The comman
 
 On MIT Supercloud, the file `generate.sh` has to be edited. and then `sbatch generate.sh` should be run. The function signature inside `generate.sh` should also be helpful in understanding how to run this.
 
+After generating the pickle files, run
+`python src/main/generate_data.py draw TSP400.pickle 400 "(1024, 1024, 3)"`
+to draw the TSP images.
+
 ## Training
 To train a model:
 1. Edit the argument in `run.sh` that represents the number of cities you would like to train on.
