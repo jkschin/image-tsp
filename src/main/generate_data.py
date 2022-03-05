@@ -70,13 +70,6 @@ def generate_manhattan_distances(coords):
 
     Returns:
         dists (list): a nested list. The symmetric distance matrix of size n*n.
-
-    Algorithm:
-    1. Generates a random (x, y) coordinate.
-    2. Tests if it is at least 10 pixels away from what has already been
-    generated.
-    3. Append to list.
-    4. When n coordinates are generated, returns the coordinates.
     """
     n = len(coords)
     dists = [[0] * n for _ in range(n)]
